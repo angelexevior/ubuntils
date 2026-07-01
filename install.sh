@@ -19,7 +19,14 @@ info() { echo -e "${C}  →${N}  $*"; }
 hdr()  { echo -e "\n${W}── $* ──${N}"; }
 ask()  {
     # ask <varname> <prompt> [default]
-    local __var="$1" __prompt="$2" __default="${3:-}"
+    # If default is provided (even ""), blank input accepts the default.
+    # If no default provided, a value is required.
+    local __var="$1" __prompt="$2"
+    local __has_default=0 __default=""
+    if [[ $# -ge 3 ]]; then
+        __has_default=1
+        __default="${3}"
+    fi
     local __hint=""
     [[ -n "$__default" ]] && __hint=" [${__default}]"
     while true; do
@@ -30,7 +37,10 @@ ask()  {
             printf -v "$__var" '%s' "$__input"
             return
         fi
-        [[ -n "$__default" ]] && { printf -v "$__var" '%s' "$__default"; return; }
+        if [[ "$__has_default" -eq 1 ]]; then
+            printf -v "$__var" '%s' ""
+            return
+        fi
         warn "Please enter a value."
     done
 }
@@ -194,7 +204,7 @@ info "Current sudo-capable users:"
 getent group sudo 2>/dev/null | awk -F: '{print "    ",$4}' || true
 getent group admin 2>/dev/null | awk -F: '{print "    ",$4}' || true
 echo ""
-ask SUDO_BASELINE "Sudo baseline (space-separated usernames, or leave blank to skip)" ""
+ask SUDO_BASELINE "Sudo baseline (space-separated usernames, or Enter to skip)" ""
 
 info "Commonly expected open ports: 22 80 443"
 ask PORTS_BASELINE "Port baseline (space-separated)" "22 80 443"
