@@ -30,14 +30,21 @@ Modular bash toolkit for Ubuntu servers. Covers maintenance checks, security aud
 ```bash
 git clone https://github.com/angelexevior/ubuntils.git
 cd ubuntils
-chmod +x ubuntils.sh
+sudo bash install.sh
 ```
 
-No dependencies to install beyond whiptail:
+`install.sh` handles everything:
 
-```bash
-apt-get install whiptail
-```
+- Confirms you're on Ubuntu
+- Checks for `whiptail` (or `dialog`) and offers to install it if missing
+- Checks optional tools (`curl`, `openssl`, `ss`, etc.) and warns if any are absent
+- Asks you for thresholds, notification settings, and security baselines, then writes `config/ubuntils.conf` and `config/modules.conf`
+- Creates the log and backup directories with correct permissions
+- Runs a syntax check across all scripts before finishing
+- Optionally installs the monitor cron job (`/etc/cron.d/ubuntils-monitor`)
+- Optionally creates a `/usr/local/bin/ubuntils` symlink so you can run it from anywhere
+
+Re-running `install.sh` is safe — existing config is backed up before being overwritten, and module toggles in `modules.conf` are preserved.
 
 ---
 
