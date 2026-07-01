@@ -15,7 +15,7 @@ Modular bash toolkit for Ubuntu servers. Covers maintenance checks, security aud
 
 | Maintenance | Security |
 |---|---|
-| ![Maintenance](https://raw.githubusercontent.com/angelexevior/ubuntils/master/docs/screenshot-maintenance.png) | ![Security](https://raw.githubusercontent.com/angelexevior/ubuntils/master/docs/screenshot-security.png) |
+| ![Maintenance](https://raw.githubusercontent.com/angelexevior/ubuntils/master/docs/screenshot-maintenance.jpg) | ![Security](https://raw.githubusercontent.com/angelexevior/ubuntils/master/docs/screenshot-security.jpg) |
 
 ---
 
