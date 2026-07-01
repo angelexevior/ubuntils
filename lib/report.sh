@@ -7,7 +7,7 @@ _UBUNTILS_REPORT_LOADED=1
 REPORT_FORMAT="${REPORT_FORMAT:-text}"
 _REPORT_RESULTS=()
 
-# Colors (text mode only, disabled if not a tty)
+# Colors when stdout is a tty; stripped when piped (e.g. into whiptail)
 if [[ -t 1 ]]; then
     _C_PASS="\033[0;32m"
     _C_WARN="\033[0;33m"
@@ -26,16 +26,12 @@ report_info() { _report_line "INFO" "$*" "${_C_INFO}"; }
 _report_line() {
     local level="$1" msg="$2" color="$3"
     _REPORT_RESULTS+=("${level}|${msg}")
-    if [[ "$REPORT_FORMAT" == *"text"* ]]; then
-        printf "${color}[%s]${_C_RESET} %s\n" "$level" "$msg"
-    fi
+    # Text output always goes to stdout — REPORT_FORMAT controls extra file outputs only
+    printf "${color}[%s]${_C_RESET} %s\n" "$level" "$msg"
 }
 
 report_section() {
-    local title="$1"
-    if [[ "$REPORT_FORMAT" == *"text"* ]]; then
-        printf "\n${_C_INFO}=== %s ===${_C_RESET}\n" "$title"
-    fi
+    printf "\n${_C_INFO}=== %s ===${_C_RESET}\n" "$1"
 }
 
 report_start() {
@@ -46,7 +42,7 @@ report_start() {
 
 report_finish() {
     local pass=0 warn=0 fail=0
-    for r in "${_REPORT_RESULTS[@]}"; do
+    for r in "${_REPORT_RESULTS[@]+"${_REPORT_RESULTS[@]}"}"; do
         case "${r%%|*}" in
             PASS) (( pass++ )) ;;
             WARN) (( warn++ )) ;;
@@ -54,19 +50,8 @@ report_finish() {
         esac
     done
 
-    if [[ "$REPORT_FORMAT" == *"text"* ]]; then
-        printf "\n%s — PASS:%d  WARN:%d  FAIL:%d\n" "$_REPORT_MODULE" "$pass" "$warn" "$fail"
-    fi
+    printf "\n%s — PASS:%d  WARN:%d  FAIL:%d\n" "$_REPORT_MODULE" "$pass" "$warn" "$fail"
 
-    if [[ "$REPORT_FORMAT" == *"json"* ]]; then
-        _report_json "$pass" "$warn" "$fail"
-    fi
-
-    if [[ "$REPORT_FORMAT" == *"html"* ]]; then
-        _report_html "$pass" "$warn" "$fail"
-    fi
-
-    # Save run log for diffing
     local log_dir="${LOG_DIR:-$(dirname "$(realpath "${BASH_SOURCE[0]}")")/../logs}"
     local runs_dir="${log_dir}/runs"
     mkdir -p "$runs_dir"
@@ -75,20 +60,24 @@ report_finish() {
         echo "module=${_REPORT_MODULE}"
         echo "timestamp=${_REPORT_TS}"
         echo "pass=${pass} warn=${warn} fail=${fail}"
-        for r in "${_REPORT_RESULTS[@]}"; do
+        for r in "${_REPORT_RESULTS[@]+"${_REPORT_RESULTS[@]}"}"; do
             echo "$r"
         done
     } > "$run_file"
 
     # Diff against previous run
     local prev
-    prev=$(ls -t "${runs_dir}/${_REPORT_MODULE}-"*.log 2>/dev/null | sed -n '2p')
+    prev=$(ls -t "${runs_dir}/${_REPORT_MODULE}-"*.log 2>/dev/null | sed -n '2p' || true)
     if [[ -n "$prev" ]]; then
         local diff_out; diff_out=$(diff "$prev" "$run_file" 2>/dev/null || true)
         if [[ -n "$diff_out" ]]; then
             printf "\n${_C_INFO}Changes since last run:${_C_RESET}\n%s\n" "$diff_out"
         fi
     fi
+
+    # Extra file outputs
+    [[ "$REPORT_FORMAT" == *"json"* ]] && _report_json "$pass" "$warn" "$fail"
+    [[ "$REPORT_FORMAT" == *"html"* ]] && _report_html "$pass" "$warn" "$fail"
 
     (( fail > 0 )) && return 2
     (( warn > 0 )) && return 1
@@ -97,15 +86,20 @@ report_finish() {
 
 _report_json() {
     local pass="$1" warn="$2" fail="$3"
-    printf '{"module":"%s","timestamp":"%s","pass":%d,"warn":%d,"fail":%d,"results":[' \
-        "$_REPORT_MODULE" "$_REPORT_TS" "$pass" "$warn" "$fail"
-    local first=1
-    for r in "${_REPORT_RESULTS[@]}"; do
-        local lvl="${r%%|*}" msg="${r#*|}"
-        [[ "$first" -eq 1 ]] && first=0 || printf ','
-        printf '{"level":"%s","message":"%s"}' "$lvl" "${msg//\"/\\\"}"
-    done
-    printf ']}\n'
+    local log_dir="${LOG_DIR:-$(dirname "$(realpath "${BASH_SOURCE[0]}")")/../logs}"
+    local json_file="${log_dir}/runs/${_REPORT_MODULE}-${_REPORT_TS}.json"
+    {
+        printf '{"module":"%s","timestamp":"%s","pass":%d,"warn":%d,"fail":%d,"results":[' \
+            "$_REPORT_MODULE" "$_REPORT_TS" "$pass" "$warn" "$fail"
+        local first=1
+        for r in "${_REPORT_RESULTS[@]+"${_REPORT_RESULTS[@]}"}"; do
+            local lvl="${r%%|*}" msg="${r#*|}"
+            [[ "$first" -eq 1 ]] && first=0 || printf ','
+            printf '{"level":"%s","message":"%s"}' "$lvl" "${msg//\"/\\\"}"
+        done
+        printf ']}\n'
+    } > "$json_file"
+    printf "JSON report: %s\n" "$json_file"
 }
 
 _report_html() {
@@ -131,7 +125,7 @@ table{border-collapse:collapse;width:100%}td{padding:4px 8px;border-bottom:1px s
 </div>
 <table>
 HTML
-        for r in "${_REPORT_RESULTS[@]}"; do
+        for r in "${_REPORT_RESULTS[@]+"${_REPORT_RESULTS[@]}"}"; do
             local lvl="${r%%|*}" msg="${r#*|}"
             local cls; cls=$(echo "$lvl" | tr '[:upper:]' '[:lower:]')
             printf '<tr><td class="%s">%s</td><td>%s</td></tr>\n' "$cls" "$lvl" "${msg//</&lt;}"

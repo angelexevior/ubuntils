@@ -49,31 +49,41 @@ _main_menu() {
     done
 }
 
+_run_module_tui() {
+    local title="$1" outfile="$2"; shift 2
+    # Run module, capture to file, then display with textbox (reads file, not stdin)
+    "$@" > "$outfile" 2>&1 || true
+    if [[ -s "$outfile" ]]; then
+        "$_TUI_CMD" --title "$title" --textbox "$outfile" 30 80 3>&1 1>&2 2>&3 || true
+    else
+        tui_msgbox "$title" "No output produced. Check logs in ${LOG_DIR}/runs/"
+    fi
+}
+
 _run_maintenance() {
-    bash "${BASE_DIR}/modules/maintenance/run.sh" "$AUTO" 2>&1 | \
-        tee /tmp/ubuntils-maintenance-out.txt | \
-        "$(_TUI_CMD_fallback)" --title "Maintenance" --scrolltext 30 80 || true
-    tui_msgbox "Maintenance" "$(tail -5 /tmp/ubuntils-maintenance-out.txt)"
+    _run_module_tui "Maintenance" /tmp/ubuntils-maintenance.txt \
+        bash "${BASE_DIR}/modules/maintenance/run.sh" "$AUTO"
 }
 
 _run_security() {
-    bash "${BASE_DIR}/modules/security/run.sh" 2>&1 | \
-        tee /tmp/ubuntils-security-out.txt | \
-        "$(_TUI_CMD_fallback)" --title "Security" --scrolltext 30 80 || true
-    tui_msgbox "Security" "$(tail -5 /tmp/ubuntils-security-out.txt)"
+    _run_module_tui "Security" /tmp/ubuntils-security.txt \
+        bash "${BASE_DIR}/modules/security/run.sh"
 }
 
 _run_optimize() {
     local mode
     mode=$(tui_menu "Optimize" "Choose optimization mode:" \
         "interactive" "Show current → suggested → confirm each change" \
-        "auto"        "Apply all suggestions automatically (--auto)") || return
+        "auto"        "Apply all suggestions without prompting (--auto)") || return
     local opt_auto=""
     [[ "$mode" == "auto" ]] && opt_auto="--auto"
-    bash "${BASE_DIR}/modules/optimize/run.sh" "$opt_auto" 2>&1 | \
-        tee /tmp/ubuntils-optimize-out.txt | \
-        "$(_TUI_CMD_fallback)" --title "Optimize" --scrolltext 30 80 || true
-    tui_msgbox "Optimize" "$(tail -5 /tmp/ubuntils-optimize-out.txt)"
+    if [[ "$opt_auto" == "--auto" ]]; then
+        _run_module_tui "Optimize" /tmp/ubuntils-optimize.txt \
+            bash "${BASE_DIR}/modules/optimize/run.sh" "--auto"
+    else
+        # Interactive mode: run directly so confirm prompts work
+        bash "${BASE_DIR}/modules/optimize/run.sh"
+    fi
 }
 
 _run_install() {
@@ -83,15 +93,14 @@ _run_install() {
 _run_monitor() {
     local choice
     choice=$(tui_menu "Monitor" "Monitor options:" \
-        "status"  "Run monitor checks now (preview output)" \
+        "status"  "Run monitor checks now and show output" \
         "cron"    "Install/remove cron job (runs every 5 min)" \
         "config"  "Edit thresholds in ubuntils.conf") || return
 
     case "$choice" in
         status)
-            bash "${BASE_DIR}/modules/monitor/run.sh" 2>&1 | \
-                tee /tmp/ubuntils-monitor-out.txt | \
-                "$(_TUI_CMD_fallback)" --title "Monitor" --scrolltext 25 80 || true
+            _run_module_tui "Monitor" /tmp/ubuntils-monitor.txt \
+                bash "${BASE_DIR}/modules/monitor/run.sh"
             ;;
         cron)
             _manage_cron
@@ -135,9 +144,6 @@ _run_settings() {
     esac
 }
 
-_TUI_CMD_fallback() {
-    command -v whiptail &>/dev/null && echo "whiptail" || echo "dialog"
-}
 
 # Non-interactive / CLI mode
 if [[ $# -gt 0 ]]; then
