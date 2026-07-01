@@ -9,6 +9,9 @@ DETECT_CACHE_TTL="${DETECT_CACHE_TTL:-3600}"
 
 _detect_cache_fresh() {
     [[ -f "$DETECT_CACHE" ]] || return 1
+    # Invalidate if detect.sh itself is newer than the cache (e.g. after git pull)
+    local script; script="$(realpath "${BASH_SOURCE[0]}")"
+    [[ "$script" -nt "$DETECT_CACHE" ]] && return 1
     local age=$(( $(date +%s) - $(stat -c %Y "$DETECT_CACHE") ))
     (( age < DETECT_CACHE_TTL ))
 }
@@ -96,13 +99,27 @@ detect_run() {
     if command -v nginx &>/dev/null; then
         nginx_installed=1
         nginx_version=$(nginx -v 2>&1 | grep -oP '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)
-        for d in /etc/nginx/sites-enabled /etc/nginx/conf.d; do
-            [[ -d "$d" ]] || continue
-            while IFS= read -r f; do
-                local sn; sn=$(grep -h 'server_name' "$f" 2>/dev/null | grep -oP 'server_name\s+\K[^;]+' | head -1 | xargs 2>/dev/null || true)
-                local dr; dr=$(grep -h 'root' "$f" 2>/dev/null | grep -oP 'root\s+\K[^;]+' | head -1 | xargs 2>/dev/null || true)
-                [[ -n "$sn" ]] && { vhosts+="${sn},"; doc_roots+="${dr},"; }
-            done < <(find "$d" -maxdepth 1 \( -type f -o -type l \) 2>/dev/null)
+        # Collect all nginx config files from every likely location
+        local nginx_conf_files=()
+        while IFS= read -r f; do
+            nginx_conf_files+=("$f")
+        done < <(find /etc/nginx -type f -name '*.conf' 2>/dev/null;
+                 find /etc/nginx/sites-enabled -maxdepth 1 \( -type f -o -type l \) 2>/dev/null;
+                 find /etc/nginx/conf.d -maxdepth 1 \( -type f -o -type l \) 2>/dev/null)
+        # Deduplicate
+        local -A _seen_f=()
+        for f in "${nginx_conf_files[@]+"${nginx_conf_files[@]}"}"; do
+            [[ -n "${_seen_f[$f]:-}" ]] && continue
+            _seen_f[$f]=1
+            # Each server_name line may have multiple names; take first non-underscore one
+            local sn; sn=$(grep -h 'server_name' "$f" 2>/dev/null \
+                | grep -v '^\s*#' \
+                | grep -oP 'server_name\s+\K[^;]+' \
+                | tr ' ' '\n' | grep -v '^_$' | grep -v '^$' | head -1 || true)
+            local dr; dr=$(grep -h '^\s*root\s' "$f" 2>/dev/null \
+                | grep -v '^\s*#' \
+                | grep -oP 'root\s+\K[^;]+' | head -1 | xargs 2>/dev/null || true)
+            [[ -n "$sn" ]] && { vhosts+="${sn},"; doc_roots+="${dr},"; }
         done
     fi
 

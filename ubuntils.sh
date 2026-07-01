@@ -132,15 +132,41 @@ _manage_cron() {
 _run_settings() {
     local choice
     choice=$(tui_menu "Settings" "Settings:" \
+        "sudo"     "Set sudo user baseline" \
+        "ports"    "Set expected open ports baseline" \
         "global"   "Edit global config (ubuntils.conf)" \
-        "modules"  "Enable/disable modules (modules.conf)" \
+        "modules"  "Enable/disable module toggles (modules.conf)" \
         "detect"   "Re-run stack detection (force refresh)" \
         "back"     "Back to main menu") || return
 
     case "$choice" in
+        sudo)
+            local current; current=$(grep '^SUDO_BASELINE_USERS=' "${BASE_DIR}/config/modules.conf" | cut -d= -f2 | tr -d '"')
+            local cur_sudo; cur_sudo=$(getent group sudo 2>/dev/null | cut -d: -f4)
+            local cur_admin; cur_admin=$(getent group admin 2>/dev/null | cut -d: -f4)
+            local new_val
+            new_val=$(tui_inputbox "Sudo Baseline" \
+                "Space-separated list of expected sudo users.\nCurrently in sudo/admin groups: ${cur_sudo} ${cur_admin}" \
+                "${current}") || return
+            sed -i "s|^SUDO_BASELINE_USERS=.*|SUDO_BASELINE_USERS=\"${new_val}\"|" "${BASE_DIR}/config/modules.conf"
+            tui_msgbox "Saved" "Sudo baseline set to: ${new_val}"
+            ;;
+        ports)
+            local current; current=$(grep '^PORTS_BASELINE=' "${BASE_DIR}/config/modules.conf" | cut -d= -f2 | tr -d '"')
+            local new_val
+            new_val=$(tui_inputbox "Ports Baseline" \
+                "Space-separated list of expected listening ports." \
+                "${current}") || return
+            sed -i "s|^PORTS_BASELINE=.*|PORTS_BASELINE=\"${new_val}\"|" "${BASE_DIR}/config/modules.conf"
+            tui_msgbox "Saved" "Port baseline set to: ${new_val}"
+            ;;
         global)  "${EDITOR:-nano}" "${BASE_DIR}/config/ubuntils.conf" ;;
         modules) "${EDITOR:-nano}" "${BASE_DIR}/config/modules.conf" ;;
-        detect)  detect_run "--force" && tui_msgbox "Detect" "Detection cache refreshed." ;;
+        detect)
+            rm -f "$DETECT_CACHE"
+            detect_load "--force" 2>/dev/null || true
+            tui_msgbox "Detect" "Detection cache refreshed."
+            ;;
     esac
 }
 

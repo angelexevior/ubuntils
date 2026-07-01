@@ -12,7 +12,8 @@ check_open_ports() {
 
     if command -v ss &>/dev/null; then
         while IFS= read -r line; do
-            local port; port=$(echo "$line" | awk '{print $5}' | grep -oP ':\K[0-9]+$' | head -1)
+            # ss -tlnp: State Recv-Q Send-Q Local-Addr:Port Peer-Addr:Port [Process]
+            local port; port=$(echo "$line" | awk '{print $4}' | grep -oP ':\K[0-9]+$' | head -1)
             [[ -n "$port" ]] && listening_ports+=("$port")
         done < <(ss -tlnp 2>/dev/null | grep LISTEN)
     elif command -v netstat &>/dev/null; then

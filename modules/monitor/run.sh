@@ -25,9 +25,9 @@ _check_threshold() {
     local prev_state; prev_state=$(_get_state "$name")
 
     local new_state=0 msg="" severity=""
-    if (( $(echo "$value >= $crit" | bc -l 2>/dev/null || echo 0) )); then
+    if awk "BEGIN{exit !($value >= $crit)}"; then
         new_state=2; severity="CRITICAL"; msg="${label}: ${value} (threshold: ${crit})"
-    elif (( $(echo "$value >= $warn" | bc -l 2>/dev/null || echo 0) )); then
+    elif awk "BEGIN{exit !($value >= $warn)}"; then
         new_state=1; severity="WARNING"; msg="${label}: ${value} (threshold: ${warn})"
     fi
 
