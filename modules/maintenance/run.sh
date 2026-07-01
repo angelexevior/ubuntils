@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # modules/maintenance/run.sh — runs all enabled maintenance checks
 
-set -euo pipefail
+set -uo pipefail
 
 SCRIPT_DIR="$(dirname "$(realpath "$0")")"
 BASE_DIR="${SCRIPT_DIR}/../.."

@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # lib/tui.sh — shared whiptail/dialog helper functions
 
+[[ -n "${_UBUNTILS_TUI_LOADED:-}" ]] && return 0
+_UBUNTILS_TUI_LOADED=1
+
 _TUI_CMD=""
 
 tui_init() {

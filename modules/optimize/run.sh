@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # modules/optimize/run.sh — runs all enabled optimize checks/tuning
 
-set -euo pipefail
+set -uo pipefail
 
 SCRIPT_DIR="$(dirname "$(realpath "$0")")"
 BASE_DIR="${SCRIPT_DIR}/../.."

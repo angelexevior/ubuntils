@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # lib/report.sh — shared output formatting: text/html/json, pass/warn/fail
 
+[[ -n "${_UBUNTILS_REPORT_LOADED:-}" ]] && return 0
+_UBUNTILS_REPORT_LOADED=1
+
 REPORT_FORMAT="${REPORT_FORMAT:-text}"
 _REPORT_RESULTS=()
 

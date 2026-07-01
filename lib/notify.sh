@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # lib/notify.sh — email/telegram/slack notification senders
 
+[[ -n "${_UBUNTILS_NOTIFY_LOADED:-}" ]] && return 0
+_UBUNTILS_NOTIFY_LOADED=1
+
 notify_all() {
     local subject="$1"
     local body="$2"

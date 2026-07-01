@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # modules/monitor/run.sh — cron-driven monitor; alerts only on threshold cross
 
-set -euo pipefail
+set -uo pipefail
 
 SCRIPT_DIR="$(dirname "$(realpath "$0")")"
 BASE_DIR="${SCRIPT_DIR}/../.."

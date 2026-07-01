@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ubuntils.sh — main entrypoint
 
-set -euo pipefail
+set -uo pipefail
 
 BASE_DIR="$(dirname "$(realpath "$0")")"
 
@@ -22,8 +22,8 @@ for arg in "$@"; do
     esac
 done
 
-# Run detect on startup (cached)
-detect_load "${FORCE_DETECT}"
+# Run detect on startup (cached); non-fatal — some services simply aren't installed
+detect_load "${FORCE_DETECT}" 2>/dev/null || true
 
 _main_menu() {
     while true; do

@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # lib/backup.sh — config backup + diff-before-apply helper
 
+[[ -n "${_UBUNTILS_BACKUP_LOADED:-}" ]] && return 0
+_UBUNTILS_BACKUP_LOADED=1
+
 BACKUP_DIR="${BACKUP_DIR:-/var/backups/ubuntils}"
 
 backup_file() {
