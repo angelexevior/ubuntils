@@ -1,0 +1,9 @@
+logs/runs/*.log
+logs/runs/*.html
+logs/runs/*.json
+logs/state/*.state
+config/ubuntils.conf.bak.*
+/tmp/ubuntils-*
+*.swp
+*.swo
+.DS_Store

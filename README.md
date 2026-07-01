@@ -1,6 +1,21 @@
 # ubuntils
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Bash](https://img.shields.io/badge/language-bash-green.svg)](https://www.gnu.org/software/bash/)
+[![Platform](https://img.shields.io/badge/platform-Ubuntu-orange.svg)](https://ubuntu.com/)
+[![CI](https://github.com/angelexevior/ubuntils/actions/workflows/ci.yml/badge.svg)](https://github.com/angelexevior/ubuntils/actions/workflows/ci.yml)
+
 Modular bash toolkit for Ubuntu servers. Covers maintenance checks, security auditing, performance optimization, component installation, and threshold-based monitoring — all driven by a whiptail TUI or usable non-interactively from the CLI.
+
+> **Pure bash. No dependencies beyond standard Ubuntu tools and `whiptail`.**
+
+---
+
+## Screenshots
+
+| Maintenance | Security |
+|---|---|
+| ![Maintenance](https://raw.githubusercontent.com/angelexevior/ubuntils/master/docs/screenshot-maintenance.png) | ![Security](https://raw.githubusercontent.com/angelexevior/ubuntils/master/docs/screenshot-security.png) |
 
 ---
 

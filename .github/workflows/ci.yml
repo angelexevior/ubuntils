@@ -1,0 +1,37 @@
+name: Syntax check
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  bash-syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check bash syntax on all scripts
+        run: |
+          errors=0
+          while IFS= read -r f; do
+            if ! bash -n "$f" 2>/tmp/syn-err; then
+              echo "FAIL: $f"
+              cat /tmp/syn-err
+              errors=$((errors + 1))
+            else
+              echo "OK: $f"
+            fi
+          done < <(find . -name '*.sh' -not -path './.git/*')
+          exit $errors
+
+      - name: Check for hardcoded credentials
+        run: |
+          if grep -rn --include='*.sh' --include='*.conf' \
+            -E '(password|token|secret|api_key)\s*=\s*["\x27][^"\x27]{8,}' \
+            config/ lib/ modules/ 2>/dev/null; then
+            echo "Potential hardcoded credentials found"
+            exit 1
+          fi
+          echo "No hardcoded credentials detected"
