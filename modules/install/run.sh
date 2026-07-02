@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # modules/install/run.sh — interactive whiptail install menu
 
-set -euo pipefail
+set -uo pipefail
 
 SCRIPT_DIR="$(dirname "$(realpath "$0")")"
 BASE_DIR="${SCRIPT_DIR}/../.."
@@ -11,7 +11,9 @@ source "${BASE_DIR}/config/modules.conf"
 source "${BASE_DIR}/lib/report.sh"
 source "${BASE_DIR}/lib/tui.sh"
 source "${BASE_DIR}/lib/detect.sh"
-detect_load
+# Always re-detect here: the install checklist must reflect what's actually
+# on disk right now, not a stale cache from before something was installed.
+detect_load "--force"
 
 tui_init
 
