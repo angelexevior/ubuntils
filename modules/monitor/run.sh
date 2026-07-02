@@ -16,6 +16,8 @@ detect_load
 STATE_DIR="${LOG_DIR}/state"
 mkdir -p "$STATE_DIR"
 
+report_start "monitor"
+
 _get_state()  { cat "${STATE_DIR}/${1}.state" 2>/dev/null || echo "0"; }
 _set_state()  { echo "$2" > "${STATE_DIR}/${1}.state"; }
 
@@ -108,4 +110,4 @@ if [[ "${monitor_failed_ssh:-1}" -eq 1 ]]; then
     _check_threshold "failed_ssh" "$failed_ssh" "${FAILED_SSH_WARN:-5}" "999" "Failed SSH logins (last minute)"
 fi
 
-report_finish 2>/dev/null || true
+report_finish || true
