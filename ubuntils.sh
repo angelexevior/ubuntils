@@ -9,6 +9,7 @@ source "${BASE_DIR}/config/ubuntils.conf"
 source "${BASE_DIR}/config/modules.conf"
 source "${BASE_DIR}/lib/tui.sh"
 source "${BASE_DIR}/lib/detect.sh"
+source "${BASE_DIR}/lib/backup.sh"
 
 tui_init
 
@@ -133,6 +134,95 @@ _manage_cron() {
     fi
 }
 
+_conf_get() {
+    local file="$1" key="$2"
+    grep "^${key}=" "$file" | tail -1 | cut -d= -f2- | sed -e 's/^"//' -e 's/"$//'
+}
+
+_conf_set() {
+    local file="$1" key="$2" val="$3" quoted="$4"
+    backup_file "$file" >/dev/null
+    if [[ "$quoted" == "yes" ]]; then
+        sed -i "s|^${key}=.*|${key}=\"${val}\"|" "$file"
+    else
+        sed -i "s|^${key}=.*|${key}=${val}|" "$file"
+    fi
+}
+
+# Menu-driven editor for simple KEY=VALUE config files. Booleans (0/1) get a
+# yes/no prompt; everything else gets a text inputbox. Skips computed/path
+# entries listed in $3 (space-separated key names).
+_edit_config_file() {
+    local title="$1" file="$2" skip_keys=" ${3:-} "
+    while true; do
+        local keys=() items=()
+        while IFS= read -r k; do
+            [[ -z "$k" ]] && continue
+            [[ "$skip_keys" == *" ${k} "* ]] && continue
+            keys+=("$k")
+        done < <(grep -oP '^[A-Za-z_][A-Za-z0-9_]*(?==)' "$file")
+
+        for k in "${keys[@]}"; do
+            local v; v=$(_conf_get "$file" "$k")
+            items+=("$k" "= ${v}")
+        done
+        items+=("back" "Back")
+
+        local sel
+        sel=$(tui_menu "$title" "Select a setting to edit:" "${items[@]}") || return
+        [[ "$sel" == "back" ]] && return
+
+        local cur; cur=$(_conf_get "$file" "$sel")
+        local quoted="no"
+        grep -qP "^${sel}=\"" "$file" && quoted="yes"
+
+        if [[ "$cur" == "0" || "$cur" == "1" ]]; then
+            if tui_yesno "$sel" "Enable ${sel}? (currently: ${cur})"; then
+                _conf_set "$file" "$sel" "1" "$quoted"
+            else
+                _conf_set "$file" "$sel" "0" "$quoted"
+            fi
+        else
+            local newval
+            newval=$(tui_inputbox "$sel" "Enter new value for ${sel}:" "$cur") || continue
+            _conf_set "$file" "$sel" "$newval" "$quoted"
+        fi
+    done
+}
+
+_edit_module_toggles() {
+    local file="${BASE_DIR}/config/modules.conf"
+    local keys=()
+    while IFS= read -r line; do
+        keys+=("${line%%=*}")
+    done < <(grep -oP '^(maintenance|security|optimize|install|monitor)_[a-z0-9_]+=[01]$' "$file")
+
+    if [[ "${#keys[@]}" -eq 0 ]]; then
+        tui_msgbox "Module Toggles" "No toggles found in modules.conf"
+        return
+    fi
+
+    local items=()
+    for k in "${keys[@]}"; do
+        local v; v=$(_conf_get "$file" "$k")
+        local status="OFF"; [[ "$v" == "1" ]] && status="ON"
+        items+=("$k" "${k//_/ }" "$status")
+    done
+
+    local selected
+    selected=$(tui_checklist "Module Toggles" "Space to toggle a check on/off, Enter to save:" "${items[@]}") || return
+
+    backup_file "$file" >/dev/null
+    for k in "${keys[@]}"; do
+        if [[ "$selected" == *"\"$k\""* ]]; then
+            sed -i "s|^${k}=.*|${k}=1|" "$file"
+        else
+            sed -i "s|^${k}=.*|${k}=0|" "$file"
+        fi
+    done
+    tui_msgbox "Saved" "Module toggles updated."
+}
+
 _run_settings() {
     local choice
     choice=$(tui_menu "Settings" "Settings:" \
@@ -164,8 +254,8 @@ _run_settings() {
             sed -i "s|^PORTS_BASELINE=.*|PORTS_BASELINE=\"${new_val}\"|" "${BASE_DIR}/config/modules.conf"
             tui_msgbox "Saved" "Port baseline set to: ${new_val}"
             ;;
-        global)  "${EDITOR:-nano}" "${BASE_DIR}/config/ubuntils.conf" ;;
-        modules) "${EDITOR:-nano}" "${BASE_DIR}/config/modules.conf" ;;
+        global)  _edit_config_file "Global Config" "${BASE_DIR}/config/ubuntils.conf" "LOG_DIR" ;;
+        modules) _edit_module_toggles ;;
         detect)
             rm -f "$DETECT_CACHE"
             detect_load "--force" 2>/dev/null || true
