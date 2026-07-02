@@ -37,6 +37,7 @@ optimize_php_fpm() {
     report_info "RAM: ${ram_mb}MB, avg PHP-FPM process: ~${avg_mem_mb}MB"
     report_info "Suggested pm.max_children: ${suggested_max}"
 
+    local applied=0
     IFS=',' read -ra versions <<< "${PHP_VERSIONS:-}"
     for v in "${versions[@]}"; do
         [[ -z "$v" ]] && continue
@@ -55,17 +56,19 @@ optimize_php_fpm() {
                     report_pass "PHP ${v} pool ${pool_file}: pm.max_children=${current_max}"
                 fi
 
-                if [[ "$auto" == "--auto" && -n "$current_max" && "$current_max" != "$suggested_max" ]]; then
+                if [[ -n "$current_max" && "$current_max" != "$suggested_max" ]]; then
                     local tmp; tmp=$(mktemp)
                     sed "s/^\s*pm\.max_children\s*=.*/pm.max_children = ${suggested_max}/" "$pool_file" > "$tmp"
-                    backup_diff_apply "$pool_file" "$tmp" "--auto"
+                    if backup_diff_apply "$pool_file" "$tmp" "$auto"; then
+                        applied=1
+                    fi
                     rm -f "$tmp"
                 fi
             done < <(find "$pool_dir" -name '*.conf' -type f 2>/dev/null)
         done
     done
 
-    if [[ "$auto" == "--auto" ]]; then
+    if [[ "$applied" -eq 1 ]]; then
         IFS=',' read -ra versions2 <<< "${PHP_VERSIONS:-}"
         for v in "${versions2[@]}"; do
             systemctl reload "php${v}-fpm" &>/dev/null && report_info "Reloaded php${v}-fpm" || true

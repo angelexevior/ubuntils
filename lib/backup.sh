@@ -50,7 +50,7 @@ backup_diff_apply() {
     # Interactive confirm
     if command -v whiptail &>/dev/null; then
         whiptail --title "Apply changes?" \
-            --yesno "Apply the shown changes to:\n${target}\n\n(backup saved to ${bak})" 12 70 3>&1 1>&2 2>&3
+            --yesno "Apply the shown changes to:\n${target}\n\n(backup saved to ${bak})" 12 70
         local rc=$?
         if [[ $rc -eq 0 ]]; then
             cp "$new_content_file" "$target"
@@ -58,6 +58,7 @@ backup_diff_apply() {
         else
             echo "Aborted — original restored from backup."
             cp "$bak" "$target"
+            return 1
         fi
     else
         read -rp "Apply changes? [y/N] " ans
@@ -66,6 +67,7 @@ backup_diff_apply() {
             echo "Applied."
         else
             echo "Aborted."
+            return 1
         fi
     fi
 }

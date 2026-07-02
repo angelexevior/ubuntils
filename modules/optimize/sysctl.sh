@@ -18,8 +18,21 @@ _suggest_sysctl() {
 
     report_warn "sysctl ${key}: current=${current}, suggested=${suggested} — ${reason}"
 
+    local do_apply=0
     if [[ "$auto" == "--auto" ]]; then
+        do_apply=1
+    elif command -v whiptail &>/dev/null; then
+        whiptail --title "Apply sysctl change?" \
+            --yesno "Set ${key} = ${suggested}?\n(currently: ${current})\n${reason}" 12 70
+        [[ $? -eq 0 ]] && do_apply=1
+    else
+        read -rp "Set ${key} = ${suggested}? [y/N] " ans
+        [[ "$ans" =~ ^[Yy]$ ]] && do_apply=1
+    fi
+
+    if [[ "$do_apply" -eq 1 ]]; then
         sysctl -w "${key}=${suggested}" &>/dev/null
+        grep -q "^${key} " "$_SYSCTL_CONF" 2>/dev/null && sed -i "\|^${key} |d" "$_SYSCTL_CONF"
         echo "${key} = ${suggested}" >> "$_SYSCTL_CONF"
         report_info "Applied: ${key}=${suggested}"
     fi

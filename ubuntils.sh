@@ -81,8 +81,10 @@ _run_optimize() {
         _run_module_tui "Optimize" /tmp/ubuntils-optimize.txt \
             bash "${BASE_DIR}/modules/optimize/run.sh" "--auto"
     else
-        # Interactive mode: run directly so confirm prompts work
+        # Interactive mode: run directly so confirm prompts (read/whiptail) work on the real terminal
         bash "${BASE_DIR}/modules/optimize/run.sh"
+        echo
+        read -rp "Press Enter to return to the menu..." _
     fi
 }
 

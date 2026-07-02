@@ -44,21 +44,22 @@ optimize_nginx() {
         report_warn "nginx gzip: not enabled — enable for better compression"
     fi
 
-    if [[ "$auto" == "--auto" ]]; then
-        local tmp; tmp=$(mktemp)
-        cp "$nginx_conf" "$tmp"
-        # worker_processes
-        sed -i "s/^\s*worker_processes\s.*/worker_processes auto;/" "$tmp"
-        # worker_connections
-        sed -i "s/^\s*worker_connections\s.*/    worker_connections 1024;/" "$tmp"
-        # gzip on if not present
-        if ! grep -q 'gzip on' "$tmp"; then
-            sed -i '/http\s*{/a\    gzip on;\n    gzip_types text/plain text/css application/json application/javascript text/xml application/xml;' "$tmp"
-        fi
-        backup_diff_apply "$nginx_conf" "$tmp" "--auto"
-        nginx -t &>/dev/null && systemctl reload nginx &>/dev/null && report_info "nginx reloaded"
-        rm -f "$tmp"
+    local tmp; tmp=$(mktemp)
+    cp "$nginx_conf" "$tmp"
+    # worker_processes
+    sed -i "s/^\s*worker_processes\s.*/worker_processes auto;/" "$tmp"
+    # worker_connections
+    sed -i "s/^\s*worker_connections\s.*/    worker_connections 1024;/" "$tmp"
+    # gzip on if not present
+    if ! grep -q 'gzip on' "$tmp"; then
+        sed -i '/http\s*{/a\    gzip on;\n    gzip_types text/plain text/css application/json application/javascript text/xml application/xml;' "$tmp"
     fi
+    if ! diff -q "$nginx_conf" "$tmp" &>/dev/null; then
+        if backup_diff_apply "$nginx_conf" "$tmp" "$auto"; then
+            nginx -t &>/dev/null && systemctl reload nginx &>/dev/null && report_info "nginx reloaded"
+        fi
+    fi
+    rm -f "$tmp"
 }
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then

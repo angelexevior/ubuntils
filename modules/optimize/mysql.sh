@@ -55,16 +55,15 @@ optimize_mysql() {
         report_pass "slow_query_log: enabled"
     fi
 
-    if [[ "$auto" == "--auto" ]]; then
-        local my_cnf
-        for f in /etc/mysql/mysql.conf.d/mysqld.cnf /etc/mysql/my.cnf /etc/my.cnf; do
-            [[ -f "$f" ]] && { my_cnf="$f"; break; }
-        done
-        if [[ -n "${my_cnf:-}" ]]; then
-            local tmp; tmp=$(mktemp)
-            cp "$my_cnf" "$tmp"
-            # Add/update innodb_buffer_pool_size and max_connections under [mysqld]
-            python3 - "$tmp" "$suggested_pool" "$suggested_conn" <<'PYEOF'
+    local my_cnf
+    for f in /etc/mysql/mysql.conf.d/mysqld.cnf /etc/mysql/my.cnf /etc/my.cnf; do
+        [[ -f "$f" ]] && { my_cnf="$f"; break; }
+    done
+    if [[ -n "${my_cnf:-}" ]]; then
+        local tmp; tmp=$(mktemp)
+        cp "$my_cnf" "$tmp"
+        # Add/update innodb_buffer_pool_size and max_connections under [mysqld]
+        python3 - "$tmp" "$suggested_pool" "$suggested_conn" <<'PYEOF'
 import sys, re
 f, pool, conn = sys.argv[1], sys.argv[2], sys.argv[3]
 lines = open(f).readlines()
@@ -88,11 +87,13 @@ if in_mysqld:
             new_lines.append(f'{k} = {v}\n')
 open(f, 'w').writelines(new_lines)
 PYEOF
-            backup_diff_apply "$my_cnf" "$tmp" "--auto"
-            rm -f "$tmp"
-            systemctl restart mysql &>/dev/null || systemctl restart mariadb &>/dev/null || true
-            report_info "MySQL restarted with new config"
+        if ! diff -q "$my_cnf" "$tmp" &>/dev/null; then
+            if backup_diff_apply "$my_cnf" "$tmp" "$auto"; then
+                systemctl restart mysql &>/dev/null || systemctl restart mariadb &>/dev/null || true
+                report_info "MySQL restarted with new config"
+            fi
         fi
+        rm -f "$tmp"
     fi
 }
 
