@@ -160,7 +160,7 @@ State is kept in `logs/state/` so each check knows whether it already alerted.
 **Install the cron job from the TUI** (Monitor → Install cron), or add it manually:
 
 ```
-*/5 * * * * root bash /path/to/ubuntils/modules/monitor/run.sh >> /path/to/ubuntils/logs/runs/monitor-cron.log 2>&1
+*/5 * * * * root bash /path/to/ubuntils/modules/monitor/run.sh >> /path/to/ubuntils/logs/runs/monitor-cron.out 2>&1
 ```
 
 ---

@@ -378,7 +378,7 @@ fi
 hdr "Monitor cron"
 
 CRON_FILE="/etc/cron.d/ubuntils-monitor"
-CRON_LINE="*/5 * * * * root bash ${BASE_DIR}/modules/monitor/run.sh >> ${BASE_DIR}/logs/runs/monitor-cron.log 2>&1"
+CRON_LINE="*/5 * * * * root bash ${BASE_DIR}/modules/monitor/run.sh >> ${BASE_DIR}/logs/runs/monitor-cron.out 2>&1"
 
 if [[ -f "$CRON_FILE" ]]; then
     ok "Monitor cron already installed at ${CRON_FILE}."

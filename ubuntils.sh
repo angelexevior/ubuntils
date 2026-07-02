@@ -114,7 +114,9 @@ _run_monitor() {
 }
 
 _manage_cron() {
-    local cron_line="*/5 * * * * root bash ${BASE_DIR}/modules/monitor/run.sh >> ${LOG_DIR}/runs/monitor-cron.log 2>&1"
+    # .out, not .log — a "monitor-*.log" name here would collide with report_finish's
+    # own diff glob and get picked up as a fake "previous run" to diff against.
+    local cron_line="*/5 * * * * root bash ${BASE_DIR}/modules/monitor/run.sh >> ${LOG_DIR}/runs/monitor-cron.out 2>&1"
     local cron_file="/etc/cron.d/ubuntils-monitor"
 
     if [[ -f "$cron_file" ]]; then
