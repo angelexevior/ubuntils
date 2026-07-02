@@ -65,7 +65,7 @@ if [[ "${monitor_4xx_rate:-1}" -eq 1 ]]; then
         [[ -f "$log" ]] || continue
         # Count 4xx in last minute (use log lines with recent timestamps is hard without awk+date)
         # Approximate: last 100 lines
-        rate_4xx=$(tail -200 "$log" 2>/dev/null | awk '$9 ~ /^4[0-9][0-9]$/' | wc -l || echo 0)
+        rate_4xx=$(tail -200 "$log" 2>/dev/null | awk '$9 ~ /^4[0-9][0-9]$/' | wc -l)
         break
     done
     warn_rate="${RATE_4XX_WARN:-50}"
@@ -85,7 +85,7 @@ fi
 if [[ "${monitor_slow_queries:-1}" -eq 1 && -n "${DB_TYPE:-}" ]]; then
     slow_log_file=$(mysql --defaults-file=/etc/mysql/debian.cnf -N -e "SHOW VARIABLES LIKE 'slow_query_log_file';" 2>/dev/null | awk '{print $2}' || true)
     if [[ -f "${slow_log_file:-}" ]]; then
-        slow_count=$(tail -200 "$slow_log_file" 2>/dev/null | grep -c '^# Query_time' || echo 0)
+        slow_count=$(tail -200 "$slow_log_file" 2>/dev/null | grep -c '^# Query_time' || true)
         warn_slow="${SLOW_QUERIES_WARN:-10}"
         if (( slow_count >= warn_slow )); then
             prev=$(_get_state "slow_queries")
@@ -101,9 +101,9 @@ fi
 if [[ "${monitor_failed_ssh:-1}" -eq 1 ]]; then
     failed_ssh=0
     if command -v journalctl &>/dev/null; then
-        failed_ssh=$(journalctl -u ssh --since "1 minute ago" 2>/dev/null | grep -c 'Failed password\|Invalid user' || echo 0)
+        failed_ssh=$(journalctl -u ssh --since "1 minute ago" 2>/dev/null | grep -c 'Failed password\|Invalid user' || true)
     elif [[ -f /var/log/auth.log ]]; then
-        failed_ssh=$(awk -v d="$(date '+%b %e %H:%M' --date='1 minute ago')" '$0>d' /var/log/auth.log 2>/dev/null | grep -c 'Failed password\|Invalid user' || echo 0)
+        failed_ssh=$(awk -v d="$(date '+%b %e %H:%M' --date='1 minute ago')" '$0>d' /var/log/auth.log 2>/dev/null | grep -c 'Failed password\|Invalid user' || true)
     fi
     _check_threshold "failed_ssh" "$failed_ssh" "${FAILED_SSH_WARN:-5}" "999" "Failed SSH logins (last minute)"
 fi
