@@ -42,13 +42,20 @@ notify_telegram() {
     [[ -z "${TELEGRAM_BOT_TOKEN:-}" || -z "${TELEGRAM_CHAT_ID:-}" ]] && {
         echo "notify_telegram: TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID not set" >&2; return 1
     }
-    local text; text=$(printf "*%s*\n%s" "$subject" "$body")
-    curl -sS -X POST \
+    # Sent as plain text (no parse_mode): subject/body can contain arbitrary
+    # characters (hostnames, paths, log lines with _ * [ ] etc.), and
+    # Telegram's Markdown parser 400s on unbalanced entities, which would
+    # otherwise silently drop the alert.
+    local text; text=$(printf "%s\n\n%s" "$subject" "$body")
+    local response
+    response=$(curl -sS -X POST \
         "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
         -d chat_id="${TELEGRAM_CHAT_ID}" \
-        -d parse_mode="Markdown" \
-        --data-urlencode text="$text" \
-        -o /dev/null
+        --data-urlencode text="$text")
+    if [[ "$response" != *'"ok":true'* ]]; then
+        echo "notify_telegram: send failed: $response" >&2
+        return 1
+    fi
 }
 
 notify_slack() {
