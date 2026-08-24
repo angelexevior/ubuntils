@@ -7,9 +7,11 @@ _UBUNTILS_NOTIFY_LOADED=1
 notify_all() {
     local subject="$1"
     local body="$2"
-    [[ "${NOTIFY_EMAIL:-0}" -eq 1 ]]    && notify_email "$subject" "$body"
-    [[ "${NOTIFY_TELEGRAM:-0}" -eq 1 ]] && notify_telegram "$subject" "$body"
-    [[ "${NOTIFY_SLACK:-0}" -eq 1 ]]    && notify_slack "$subject" "$body"
+    local server_id="${SERVER_ID:-$(hostname -s 2>/dev/null || echo server)}"
+    local tagged_subject="[${server_id}] ${subject}"
+    [[ "${NOTIFY_EMAIL:-0}" -eq 1 ]]    && notify_email "$tagged_subject" "$body"
+    [[ "${NOTIFY_TELEGRAM:-0}" -eq 1 ]] && notify_telegram "$tagged_subject" "$body"
+    [[ "${NOTIFY_SLACK:-0}" -eq 1 ]]    && notify_slack "$tagged_subject" "$body"
 }
 
 notify_email() {

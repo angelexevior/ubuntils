@@ -186,6 +186,7 @@ ask_opt WANT_TELEGRAM "Enable Telegram notifications?" "n"
 if [[ "$WANT_TELEGRAM" == "y" ]]; then
     ask TELEGRAM_BOT_TOKEN "Telegram bot token" ""
     ask TELEGRAM_CHAT_ID   "Telegram chat ID"   ""
+    ask SERVER_ID "Server identifier (shown in every notification)" "$(hostname -s 2>/dev/null || echo server)"
     NOTIFY_TELEGRAM=1
 fi
 
