@@ -13,7 +13,7 @@ Modular bash toolkit for Ubuntu servers. Covers maintenance checks, security aud
 
 ## Watch it in action
 
-[![Ubuntils demo](https://img.youtube.com/vi/dAGBy-niOB8/maxresdefault.jpg)](https://youtu.be/dAGBy-niOB8)
+[![Ubuntils demo](https://raw.githubusercontent.com/angelexevior/ubuntils/master/docs/thumbnail.png)](https://youtu.be/dAGBy-niOB8)
 
 *Knowing you're being attacked is Layer 1 security. Watch the 2-minute overview of what Ubuntils does and why it exists.*
 
